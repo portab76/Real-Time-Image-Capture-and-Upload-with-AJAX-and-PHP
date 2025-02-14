@@ -1,0 +1,1 @@
+# Real-Time-Image-Capture-and-Upload-with-AJAX-and-PHP
