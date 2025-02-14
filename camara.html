@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Capturador de Imágenes</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        
+        #videoContainer {
+            position: relative;
+            width: 640px;
+            height: 480px;
+            margin: 20px 0;
+            border: 2px solid #ccc;
+        }
+        
+        #player {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .button-container {
+            margin: 20px 0;
+        }
+        
+        button {
+            padding: 12px 24px;
+            margin-right: 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: opacity 0.3s;
+        }
+        
+        #startBtn {
+            background-color: #4CAF50;
+            color: white;
+        }
+        
+        #stopBtn {
+            background-color: #f44336;
+            color: white;
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        #previews {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .preview-img {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>Capturador de Imágenes</h1>
+    <div class="button-container">
+        <button id="startBtn">Iniciar Captura</button>
+        <button id="stopBtn" disabled>Detener y Enviar</button>
+		<button id="capture">*Capturar</button>
+    </div>    
+    <div id="videoContainer">
+		<video id="player" controls autoplay></video>
+    </div>
+	<canvas id="snapshot" width=320 height=240></canvas>
+    <div id="previews"></div>
+    <script>
+	var player = document.getElementById('player'); 
+	var snapshotCanvas = document.getElementById('snapshot');
+	var captureButton = document.getElementById('capture');
+	let captureInterval;
+	let capturedImages = [];
+		
+	var c = 0;		
+	var handleSuccess = function(stream) {
+		player.srcObject = stream;
+		console.log(c++);
+	};
+
+	captureButton.addEventListener('click', function() {
+		var context = snapshot.getContext('2d');
+		// Draw the video frame to the canvas.
+		context.drawImage(player, 0, 0, snapshotCanvas.width, snapshotCanvas.height);	
+		var dataURL = snapshotCanvas.toDataURL();
+		capturedImages.push(dataURL);
+		console.log(capturedImages);
+		sendToServer();
+	});
+
+	navigator.mediaDevices.getUserMedia({video: true}).then(handleSuccess);
+	const startBtn = document.getElementById('startBtn');
+	const stopBtn = document.getElementById('stopBtn');
+	const previews = document.getElementById('previews');
+	  
+	// Configurar el botón de inicio
+	startBtn.addEventListener('click', async() => {
+		startBtn.disabled = true;
+		stopBtn.disabled = false;             
+		captureInterval = setInterval(captureFrame, 100);
+	});
+
+	// Configurar el botón de detener
+	stopBtn.addEventListener('click', () => {
+		startBtn.disabled = false;
+		stopBtn.disabled = true;
+		clearInterval(captureInterval);
+	});
+
+	async function captureFrame() {
+		const snapshotCanvas = document.createElement('canvas');
+		const player = document.getElementById('player'); 
+		const context = snapshotCanvas.getContext('2d');
+		snapshotCanvas.width = player.videoWidth;
+		snapshotCanvas.height = player.videoHeight;
+		context.drawImage(player, 0, 0, snapshotCanvas.width, snapshotCanvas.height);
+		const dataURL = snapshotCanvas.toDataURL('image/jpeg', 0.85);
+		capturedImages.push(dataURL);
+		await sendToServer();
+	}
+
+	async function sendToServer() {
+		const payload = {
+			images: capturedImages,
+			timestamp: new Date().toISOString()
+		};
+		try {
+			const response = await fetch('camara.php', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify(payload)
+			});
+
+			const result = await response.json();
+			
+			if (result.success) {
+				previews.innerHTML ='Éxito:'+ result;
+				capturedImages = []; // Limpia el array después del envío
+			} else {
+				previews.innerHTML =  'Error del servidor:' + result.error;
+			}
+		} catch (error) {
+			previews.innerHTML =  'Error de red:'+ error;
+		}
+	}
+    </script>
+</body>
+</html>
