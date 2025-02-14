@@ -14,6 +14,6 @@ This project allows real-time image capture from a webcam and uploads it to a se
 - JavaScript (AJAX, Fetch API)
 - PHP
 
-##Usage
+## Usage
 
 If accessing the application from a different address than localhost, you must use https:// to enable camera access due to browser security policies.
